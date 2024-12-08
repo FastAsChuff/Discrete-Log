@@ -14,12 +14,18 @@ The smallest non-negative solution is e mod o where o is the multiplicative orde
 Usage:- ./dlog.bin a b n
 
 E.g. ./dlog.bin 3 19 2800000051
+
 3^2055010318 = 19 mod 2800000051
+
 Time = 4502 us
 
+
 ./dlog.bin 3 19 4000000001
+
 3^e = 19 mod 4000000001
+
 No Solutions!
+
 Time = 6042 us
 
 [CPU i7-6700 @3.4GHz]
