@@ -119,10 +119,25 @@ uint32_t isqrt(uint64_t n) {
   return ai;
 }
 
-
 _Bool dlogu32naive(uint32_t a, uint32_t b, uint32_t n, uint32_t count, uint32_t *e) {
-  uint32_t i = 0;
-  uint32_t apow = 1;
+  if (n == 0) return false;
+  if (a >= n) a %= n;
+  if (b >= n) b %= n;
+  *e = 1u;
+  if ((a == 0) && (b == 0)) return true;
+  *e = 0;
+  if (a < 2u) {
+    if (b == a) return true;
+    return false;
+  }
+  uint32_t gcd;
+  if (b == 1) {
+    gcdu32(a, n, &gcd);
+    if (gcd != 1) return false;
+    return true;
+  }
+  uint32_t i = 1;
+  uint32_t apow = a;
   for (; i<count; i++) {
     if (b == apow) {
       *e = i;
@@ -156,23 +171,18 @@ _Bool dlogu32mmdl_select(uint32_t atoemodn, uint32_t *ix, dlogu32mmdl_t *apowers
 
 _Bool dlogu32mmdl(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
   // Returns an e if one exists, such that a^e = b mod n using a meet-in-the-middle algorithm. (n and a must be co-prime)  
-  // The returned e is not necessarily the smallest. 
-  // Take its residue modulo the multiplicative order of a mod n for the smallest possible e.
+  // The returned e is the smallest non-negative solution. 
   // Requires ~1MiB RAM.
   if (n == 0) return false;
   if (a >= n) a %= n;
-  if (a == 0) return false;
   if (b >= n) b %= n;
-  if (b == 0) return false;
-  if (n < 100000u) return dlogu32naive(a, b, n, n, e);
-  if (dlogu32naive(a, b, n, 100, e)) return true;
-  //uint32_t ainv = modpowu32(a, n-2, n); // Assumes n is prime.
-  uint32_t ainv, gcd;
-  if (!modinvu32(a, n, &ainv, &gcd)) return false;
+  *e = 0;
+  if (a < 2u) {
+    if (b == a) return true;
+    return false;
+  }
   uint32_t m = isqrt(n);
   m += (n > m*m);
-  uint32_t atominusm = modpowu32(ainv, m, n);
-  uint32_t ix;
   dlogu32mmdl_t *apowers = aligned_alloc(alignof(dlogu32mmdl_t), DLOGU32MMDL_APOWERS_SIZE * sizeof(dlogu32mmdl_t));
   if (apowers == NULL) return false;   
   memset(apowers, 0, DLOGU32MMDL_APOWERS_SIZE * sizeof(dlogu32mmdl_t));
@@ -183,14 +193,29 @@ _Bool dlogu32mmdl(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
     dlogu32mmdl_insert(newel, apowers);
     newel.e++;
     newel.atoemodn = ((uint64_t)newel.atoemodn * a) % n;
-  } while ((newel.atoemodn != 1) && (newel.e < m));
-  uint32_t i = 0;
-  uint32_t bi = b;
-  uint32_t atominusmpowers = 1;
+  } while ((newel.atoemodn != b) && (newel.atoemodn != 1) && (newel.e < m));
+  if (newel.atoemodn == b) {
+    *e = newel.e;
+    free(apowers);
+    return true;
+  }
+  if (newel.atoemodn == 1) {
+    free(apowers);
+    return false;
+  }
+  // a(im+j) = b mod n => b(a^(-m))^i = a^j mod n
+  uint32_t ainv, gcd;
+  if (!modinvu32(a, n, &ainv, &gcd)) {
+    free(apowers);
+    return false;
+  }
+  uint32_t i = 1;
+  uint32_t atominusm = modpowu32(ainv, m, n);
+  uint32_t bi = ((uint64_t)b*atominusm) % n;
+  uint32_t ix;
   while (i < m) {
     if (dlogu32mmdl_select(bi, &ix, apowers)) break;
-    atominusmpowers = ((uint64_t)atominusmpowers*atominusm) % n;
-    bi = ((uint64_t)b*atominusmpowers) % n;
+    bi = ((uint64_t)bi*atominusm) % n;
     i++;
   }
   if (i >= m) {
@@ -203,23 +228,42 @@ _Bool dlogu32mmdl(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
 }
 
 _Bool dlogu32(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
-  // Sets e such that a^e = b mod n if one exists and returns true, returns false otherwise.
-  // If o is the multiplicative order of a mod n, the smallest possible solution is e mod o.
+  // Sets e to smallest non-negative solution such that a^e = b mod n and returns true if a solution exists.
+  // Returns false otherwise.
   if (n == 0) return false;
+  if (a >= n) a %= n;
+  if (b >= n) b %= n;
+  *e = 1u;
+  if ((a == 0) && (b == 0)) return true;
+  *e = 0;
+  if (a < 2u) {
+    if (b == a) return true;
+    return false;
+  }
   uint32_t gcd;
   gcdu32(a, n, &gcd);
+  if (b == 1) {
+    if (gcd != 1) return false;
+    return true;
+  }
   if (gcd > 1) {
     if ((b % gcd) != 0) return false;
     uint32_t k = gcd;
     // (sk)^e = tk mod uk
-    // (sk)^(e-1) = t/s mod u
+    // If (e >= 1) && gcd(u,k) == 1
+    //   (sk)^(e-1) = t/s mod u
     uint32_t invs = 1;
     uint32_t u = n/k;
-    if(!modinvu32(a/k, u, &invs, &gcd)) return false;
-    uint32_t newb = ((uint64_t)(b/k)*invs) % u;
-    if (!dlogu32(a,newb,u,e)) return false;
-    (*e)++;
-    return b == modpowu32(a,*e,n);
+    gcdu32(u, k, &gcd);
+    if (gcd == 1) {
+      if(!modinvu32(a/k, u, &invs, &gcd)) return false;
+      uint32_t newb = ((uint64_t)(b/k)*invs) % u;
+      if (!dlogu32(a,newb,u,e)) return false;
+      (*e)++;
+      return b == modpowu32(a,*e,n);
+    } else {
+      return dlogu32naive(a,b,n,n,e);
+    }
   } else {
     return dlogu32mmdl(a,b,n,e);
   }
