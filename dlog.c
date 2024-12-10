@@ -8,7 +8,7 @@
 #include <sys/time.h>
 #include </home/simon/dlogu32.c>
 
-// gcc dlog.c -o dlog.bin -lm -fasm -O3 -march=native -Wall -std=c11
+// gcc dlog.c -o dlog.bin -lm -O3 -march=native -Wall -std=c11
 
 uint64_t gettimeus(void) {
   struct timeval thistime;
