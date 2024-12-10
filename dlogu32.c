@@ -173,7 +173,7 @@ _Bool dlogu32mmdl(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
   // Returns an e if one exists, such that a^e = b mod n using a meet-in-the-middle algorithm. (n and a must be co-prime)  
   // The returned e is the smallest non-negative solution. 
   // Requires ~1MiB RAM.
-  if (n < 10000u) return dlogu32naive(a,b,n,n,e);
+  if (n < 100000u) return dlogu32naive(a,b,n,n,e);
   if (n == 0) return false;
   if (a >= n) a %= n;
   if (b >= n) b %= n;
