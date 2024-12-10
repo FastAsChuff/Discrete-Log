@@ -1,15 +1,15 @@
 # Discrete-Log
 Deterministic Calculation Of Discrete Logarithms.
 
+
+dlog.c
+======
+
 This program calculates discrete logarithms deterministically. 
 
-Given a, b, n, it returns an e such that a^e = b mod n, or an error message if it is impossible. 
+Given a, b, n, it returns the smallest e such that a^e = b mod n, or an error message if it is impossible. 
 
-There may be a smaller positive e which also works. 
-
-The smallest non-negative solution is e mod o where o is the multiplicative order of a mod n.
-
-0 < a,b,n < 2^32
+0 <= a,b < n < 2^32
 
 Usage:- ./dlog.bin a b n
 
@@ -27,5 +27,12 @@ Time = 4502 us
 No Solutions!
 
 Time = 6042 us
+
+
+./dlog.bin 35 6171875 10000000
+
+35^17 = 6171875 mod 10000000
+
+Time = 1 us
 
 [CPU i7-6700 @3.4GHz]

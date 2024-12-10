@@ -20,17 +20,19 @@ int main(int argc, char* argv[]) {
   uint32_t a = 101;
   uint32_t b = 654321;
   uint32_t n = 100000007;
+  uint32_t e = 0;
+  _Bool success;
   if (argc >= 4) {
     a = atol(argv[1]);
     b = atol(argv[2]);
     n = atol(argv[3]);
   } 
-  if ((argc < 4) || (a == 0) || (b == 0) || (n == 0)) {
-    printf("This program calculates discrete logarithms deterministically. Given a, b, n, it returns an e such that a^e = b mod n, or an error message if it is impossible. There may be a smaller positive e which also works. The smallest non-negative solution is e mod o where o is the multiplicative order of a mod n.\n 0 < a,b,n < 2^32\nUsage:- %s a b n\n", argv[0]);
+  if ((argc < 4) || (n == 0)) {
+    printf("This program calculates discrete logarithms deterministically. Given a, b, n, it returns the smallest non-negative e such that a^e = b mod n, or an error message if it is impossible. \n0 <= a,b < n < 2^32\nUsage:- %s a b n\n", argv[0]);
     exit(0);
   }
-  uint32_t e = 0;
-  _Bool success;
+  a %= n;
+  b %= n;
   uint64_t starttime, endtime;
   starttime = gettimeus();
   success = dlogu32(a, b, n, &e);
