@@ -1,8 +1,6 @@
 # Discrete-Log
 Deterministic Calculation Of Discrete Logarithms.
 
-[Buggy - Work In Progress]
-
 This program calculates discrete logarithms deterministically. 
 
 Given a, b, n, it returns an e such that a^e = b mod n, or an error message if it is impossible. 
