@@ -173,6 +173,7 @@ _Bool dlogu32mmdl(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
   // Returns an e if one exists, such that a^e = b mod n using a meet-in-the-middle algorithm. (n and a must be co-prime)  
   // The returned e is the smallest non-negative solution. 
   // Requires ~1MiB RAM.
+  if (n < 10000u) return dlogu32naive(a,b,n,n,e);
   if (n == 0) return false;
   if (a >= n) a %= n;
   if (b >= n) b %= n;
@@ -227,6 +228,16 @@ _Bool dlogu32mmdl(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
   return true;
 }
 
+uint32_t largestcoprimefactoru32(uint32_t n, uint32_t k) {
+  // Returns the largest factor of n that is co-prime to k.
+  uint32_t gcd;
+  do {
+    gcdu32(k, n, &gcd);
+    n /= gcd;
+  } while (gcd > 1);
+  return n;
+}
+
 _Bool dlogu32(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
   // Sets e to smallest non-negative solution such that a^e = b mod n and returns true if a solution exists.
   // Returns false otherwise.
@@ -247,23 +258,27 @@ _Bool dlogu32(uint32_t a, uint32_t b, uint32_t n, uint32_t *e) {
     return true;
   }
   if (gcd > 1) {
-    if ((b % gcd) != 0) return false;
-    uint32_t k = gcd;
-    // (sk)^e = tk mod uk
-    // If (e >= 1) && gcd(u,k) == 1
-    //   (sk)^(e-1) = t/s mod u
-    uint32_t invs = 1;
-    uint32_t u = n/k;
-    gcdu32(u, k, &gcd);
-    if (gcd == 1) {
-      if(!modinvu32(a/k, u, &invs, &gcd)) return false;
-      uint32_t newb = ((uint64_t)(b/k)*invs) % u;
-      if (!dlogu32(a,newb,u,e)) return false;
-      (*e)++;
-      return b == modpowu32(a,*e,n);
-    } else {
-      return dlogu32naive(a,b,n,n,e);
+    uint32_t v = largestcoprimefactoru32(n, gcd);
+    uint32_t u = n/v;
+    uint32_t bmodu = b % u;
+    uint32_t mine = 1u;
+    uint32_t apow = a % u;
+    while ((apow != 0) && (apow != bmodu)) {
+      mine++;
+      apow = ((uint64_t)apow*a) % u;
     }
+    *e = mine;
+    if (v == 1) return b == modpowu32(a,*e,n);
+    if (bmodu != 0) return b == modpowu32(a,*e,n);
+    if(!dlogu32mmdl(a,b,v,e)) return false;
+    if (mine > *e) {
+      uint32_t invamodv, ov;
+      if(!modinvu32(a, v, &invamodv, &gcd)) return false;
+      if(!dlogu32mmdl(a,invamodv,v,&ov)) return false;
+      ov++; // ov is now the multiplicative order of a mod v
+      *e += ov*(((mine + (uint64_t)ov) - (1ULL + *e))/ov); // make >= mine by adding multiples of ov.
+    }
+    return b == modpowu32(a,*e,n);
   } else {
     return dlogu32mmdl(a,b,n,e);
   }
